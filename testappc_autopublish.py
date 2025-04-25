@@ -5,7 +5,7 @@ import os
 
 # Define the subdirectories - todo: check ROOT_DIR_POSIX when taking to production
 ROOT_DIR_POSIX      = "/mnt/c/Users/janne.saarikettu/source/repos/misc/AppcAutoPublish/TestAppC_AutoPublish/"   # For production in Linux
-ROOT_DIR_NT         = r"C:\Users\janne.saarikettu\source\repos\misc\AppcAutoPublish\TestAppC_AutoPublish"       # For testing in Windows
+ROOT_DIR_NT         = r"C:\Users\janne.saarikettu\source\repos\misc\AppcAutoPublish\AutoPublish"                # For testing in Windows
 ROOT_DIR            = "" # Set to empty string to be set later based on OS
 
 DATA_DIR            = "data"
@@ -37,7 +37,7 @@ def check_directories():
 
     # Are we running in Windows or Linux?
     global ROOT_DIR
-    if (os.name == 'nt'):
+    if (os.name == 'nt'):           # Testing in Windows
         ROOT_DIR = ROOT_DIR_NT
     else:
         ROOT_DIR = ROOT_DIR_POSIX
@@ -71,4 +71,11 @@ if __name__ == "__main__":
         supported_repos = read_supported_repos()
     except:
         raise Exception("Error in reading list of supported repositories - cannot proceed.")
+    
+    if (os.name == 'nt'):           # Testing in Windows
+        print("Supported Repositories:")
+        for repo in supported_repos:
+            print(repo.strip())
+    
 
+    
