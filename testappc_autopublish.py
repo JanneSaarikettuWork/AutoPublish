@@ -4,21 +4,38 @@ import os
 
 
 # Define the subdirectories - todo: check ROOT_DIR_POSIX when taking to production
-ROOT_DIR_POSIX      = "/mnt/c/Users/janne.saarikettu/source/repos/misc/AppcAutoPublish/TestAppC_AutoPublish/"   # For production in Linux
-ROOT_DIR_NT         = r"C:\Users\janne.saarikettu\source\repos\misc\AppcAutoPublish\AutoPublish"                # For testing in Windows
+ROOT_DIR_POSIX      = "/mnt/c/Users/janne.saarikettu/source/repos/misc/AppcAutoPublish/AutoPublish/"   # For production in Linux
+ROOT_DIR_NT         = r"C:\Users\janne.saarikettu\source\repos\misc\AppcAutoPublish\AutoPublish"       # For testing in Windows
 ROOT_DIR            = "" # Set to empty string to be set later based on OS
 
 DATA_DIR            = "data"
-BUILD_REPO_DIR      = "build_environment/repo"
-BUILD_METADATA_DIR  = "build_environment/metadata" 
+BUILD_REPO_DIR      = "build_environment/NidTestAppCenter/repo"
+BUILD_METADATA_DIR  = "build_environment/NidTestAppCenter/metadata" 
 RUN_BACKUP_DIR      = "run_environment/backup"
 RUN_REPO_DIR        = "run_environment/repo"
 
+DB_FILE = "" # Placeholder for the database file path"
+
 SUPPORTED_REPOS_FILE = os.path.join(DATA_DIR, "supported_repos")
 
+# Import database functions
+from installed_versions_db import *
 
 def check_directories():
-    """Check if a directory exists."""
+    # Are we running in Windows or Linux?
+    global ROOT_DIR
+    if (os.name == 'nt'):           # Testing in Windows
+        ROOT_DIR = ROOT_DIR_NT
+    else:
+        ROOT_DIR = ROOT_DIR_POSIX
+
+    # Check if the root directory exists and change to it
+    if not os.path.exists(ROOT_DIR):
+        print(f"Directory {ROOT_DIR} does not exist.")
+        return False
+
+    os.chdir(ROOT_DIR)
+
     if not os.path.exists(DATA_DIR):
         print(f"Directory {DATA_DIR} does not exist.")
         return False
@@ -33,18 +50,6 @@ def check_directories():
         return False
     if not os.path.exists(RUN_REPO_DIR):
         print(f"Directory {RUN_REPO_DIR} does not exist.")
-        return False
-
-    # Are we running in Windows or Linux?
-    global ROOT_DIR
-    if (os.name == 'nt'):           # Testing in Windows
-        ROOT_DIR = ROOT_DIR_NT
-    else:
-        ROOT_DIR = ROOT_DIR_POSIX
-
-    # Check if the root directory exists
-    if not os.path.exists(ROOT_DIR):
-        print(f"Directory {ROOT_DIR} does not exist.")
         return False
 
     return True
@@ -65,8 +70,6 @@ if __name__ == "__main__":
     else:
         print("Directories check OK")
 
-    os.chdir(ROOT_DIR)
-
     try:
         supported_repos = read_supported_repos()
     except:
@@ -77,5 +80,11 @@ if __name__ == "__main__":
         for repo in supported_repos:
             print(repo.strip())
     
+    try:
+        DB_FILE = initialize_db(DATA_DIR)
+    except:
+        raise Exception("Error in initializing database - cannot proceed.")
 
-    
+    if (os.name == 'nt'):           # Testing in Windows
+        print(f"Sqlite3 database '{DB_FILE}' initialized successfully.")
+
