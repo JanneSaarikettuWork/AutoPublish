@@ -43,6 +43,15 @@ def insert_record(DB_FILE, repo, release, packageName, version, versionCode, dat
     conn.commit()
     conn.close()
 
+# Check if release exists in DB - based on repo and release values
+def release_exist(DB_FILE, repo, release):
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute('SELECT COUNT(*) FROM installed_versions WHERE repo = ? AND release = ?', (repo, release))
+    count = cursor.fetchone()[0]
+    conn.close()
+    return count > 0
+
 # Fetch all records from the table
 def fetch_all_records(DB_FILE):
     conn = sqlite3.connect(DB_FILE)

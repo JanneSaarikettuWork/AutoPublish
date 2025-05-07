@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import os
+import time
 
 
 # Define the subdirectories - todo: check ROOT_DIR_POSIX when taking to production
@@ -18,8 +19,9 @@ DB_FILE = "" # Placeholder for the database file path"
 
 SUPPORTED_REPOS_FILE = os.path.join(DATA_DIR, "supported_repos")
 
-# Import database functions
+# Import database, GitHub and... functions
 from installed_versions_db import *
+from githubber import *
 
 def check_directories():
     # Are we running in Windows or Linux?
@@ -85,6 +87,42 @@ if __name__ == "__main__":
     except:
         raise Exception("Error in initializing database - cannot proceed.")
 
+    try:
+        initialize_githubber()
+    except:
+        raise Exception("Error in initializing githubber - cannot proceed.")
+
     if (os.name == 'nt'):           # Testing in Windows
         print(f"Sqlite3 database '{DB_FILE}' initialized successfully.")
 
+    # Application main loop
+    while True:
+        print ("Checking for new published GitHub releases in supported repos...")
+
+        # Release checking main loop
+        for repo in supported_repos:
+            repo += repo.strip()
+            print(f"Checking {repo}...")
+
+            latestRelease = getRelease(repo, 'latest')
+            URL, relname, filename, version, date, relnotes  = parse_release_data(latestRelease)
+
+            # Check if the release is already in the database
+            if release_exist(DB_FILE, repo, relname):
+                print(f"Release {relname} already exists in the database.")
+                continue
+            
+            # The release is not in the database - download its APK file
+            print(f"Release {relname} not found in the database. Downloading APK file...")
+            download_apk_file(URL, filename)
+
+            if False == os.path.exists(filename):
+                print(f"Problem in downloading file {filename}. Skipping this release.")
+                continue
+
+
+        print("Checking done. Waining for 5 minutes before next check...")
+        time.sleep(5 * 60)
+
+
+ 
