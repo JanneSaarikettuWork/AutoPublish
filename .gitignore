@@ -2,6 +2,7 @@ run_environment/
 build_environment/
 data/
 
+*.apk
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

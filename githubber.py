@@ -1,4 +1,3 @@
-
 import json
 import os
 import re
@@ -57,7 +56,8 @@ def parse_release_data(release):
         filename: The name of the release asset.
         version: The version of the release.
         date: The release date.
-        relnotes: The release notes."""
+        relnotes: The release notes.
+        html_url """""
 
     for asset in release['assets']:
         if '.apk' in asset['name']:
@@ -70,6 +70,12 @@ def parse_release_data(release):
             filename = asset['name'].strip()
             version = release['tag_name'].strip()
             date = release['published_at'].strip()
+
+            html_url = release['html_url'].strip()
+            # Remove "releases" and everything after it
+            if "releases" in html_url:
+                html_url = html_url[:html_url.index("releases")]
+
             relnotes = ''
             relnote_text_to_parse = release['body'].strip()
 
@@ -90,9 +96,9 @@ def parse_release_data(release):
 
             relnotes = relnotes.strip()
 
-            return URL, relname, filename, version, date, relnotes
+            return URL, relname, filename, version, date, relnotes, html_url
         
-    return None, None, None, None, None, None
+    return None, None, None, None, None, None, None
 
 # Running in Linux
 def download_Linux(url, name): 
@@ -112,7 +118,7 @@ def download_Linux(url, name):
     print(stderr.decode('utf-8'))
 
 # Testing in Windows
-def download_Windows(url, name): 
+def download_Windows(URL, filename): 
     """Downloads a file from a given URL using requests with authentication."""
     headers = {
         "Accept": "application/octet-stream",
@@ -120,17 +126,17 @@ def download_Windows(url, name):
     }
 
     # Send the GET request
-    response = requests.get(url, headers=headers, stream=True)
+    response = requests.get(URL, headers=headers, stream=True)
 
     # Check if the request was successful
     if response.status_code == 200:
         # Save the file
-        with open(name, "wb") as file:
+        with open(filename, "wb") as file:
             for chunk in response.iter_content(chunk_size=8192):
                 file.write(chunk)
-        print("Download completed successfully.")
+        print(f"Downloading {filename} completed successfully.")
     else:
-        print(f"Failed to download file. Status code: {response.status_code}")
+        print(f"Failed to download {filename}. Status code: {response.status_code}")
 
 
 def download_apk_file(URL, filename):
