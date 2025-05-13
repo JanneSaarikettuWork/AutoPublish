@@ -100,8 +100,8 @@ if __name__ == "__main__":
             try:
                 latestRelease = getRelease(repo, 'latest')
                 URL, relname, filename, version, date, relnotes, html_url  = parse_release_data(latestRelease)
-            except:
-                print(f"Error in getting latest release data from {repo}. Skipping this repository.")
+            except Exception as e:
+                print(f"Error in getting latest release data from {repo}. Skipping this repository.\nException: {e}")
                 continue
 
             # Is this a development release?
@@ -114,16 +114,16 @@ if __name__ == "__main__":
                 if release_exist(DB_FILE, repo, relname):
                     print(f"Release {relname} already exists in the database.")
                     continue
-            except:
-                print(f"Error in checking if release {relname} exists in the database. Skipping this release.")
+            except Exception as e:
+                print(f"Error in checking if release {relname} exists in the database. Skipping this release {relname}.\nException: {e}")
                 continue
             
             # Download the APK file of the release (the first file with .apk in its name)
             try:
                 print(f"Release {relname} not found in the database. Downloading APK file...")
                 download_apk_file(URL, filename)
-            except:
-                print(f"Error in downloading apk file {filename}. Skipping this release {relname}.")
+            except Exception as e:
+                print(f"Error in downloading apk file {filename}. Skipping this release {relname}.\nException: {e}")
                 continue
 
             # Double-check that the file was downloaded successfully
@@ -134,8 +134,8 @@ if __name__ == "__main__":
             # Get metadata from the APK file
             try:
                 apk_packageName, apk_versionName, apk_versionCode, apk_application = get_apk_info(filename)
-            except:
-                print(f"Error in getting APK info from {filename}. Skipping this release {relname}.")
+            except Exception as e:
+                print(f"Error in getting APK info from {filename}. Skipping this release {relname}.\nException: {e}")
                 continue
 
             orgfilename = filename
@@ -149,8 +149,8 @@ if __name__ == "__main__":
                     os.rename(filename, new_filename)
                     filename = new_filename
                     print(f"Renamed {filename} to {new_filename}")
-            except:
-                print(f"Error in renaming file {orgfilename}. Skipping this release {relname}.")
+            except Exception as e:
+                print(f"Error in renaming file {orgfilename} to {new_filename}. Skipping this release {relname}.\nException: {e}")
                 continue
 
             """
@@ -165,17 +165,9 @@ if __name__ == "__main__":
 
             try:
                 add_apk_to_fdroid(filename, apk_versionName, apk_versionCode, apk_packageName, apk_application, html_url, relnotes)
-            except:
-                print(f"Error in adding APK file {filename} to fdroid. Skipping this release {relname}.")
+            except Exception as e:
+                print(f"Error in adding APK file {filename} to fdroid. Skipping this release {relname}.\nException: {e}")
                 continue
-
-
-
-
-
 
         print("Checking done. Waining for 5 minutes before next check...")
         time.sleep(5 * 60)
-
-
- 

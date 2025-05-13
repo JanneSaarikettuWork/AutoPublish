@@ -1,4 +1,5 @@
 import os
+import shutil
 
 from config import *
 
@@ -23,6 +24,14 @@ def add_apk_to_fdroid(filename, apk_versionName, apk_versionCode, apk_packageNam
     screenshots_subdirectory = os.path.join(enUS_subdirectory, "phoneScreenshots")
     if not os.path.exists(screenshots_subdirectory):
         os.makedirs(screenshots_subdirectory)
+        # Copy sample screenshots the created directory
+        for sample_screenshot in os.listdir(DATA_DIR):
+            if sample_screenshot.lower().endswith(('.jpg', '.png')):
+                src = os.path.join(DATA_DIR, sample_screenshot)
+                dst = os.path.join(screenshots_subdirectory, sample_screenshot)
+                if not os.path.exists(dst):
+                    print(f"Copying {src} to {dst}")
+                    shutil.copy(src, dst)
 
     # Add release notes to the changelog file
     changelog_file = os.path.join(changelog_subdirectory, f"{apk_versionCode}.txt")
@@ -39,8 +48,9 @@ def add_apk_to_fdroid(filename, apk_versionName, apk_versionCode, apk_packageNam
             f.write(f"Categories:\n- TestAppCenter\n")
             f.write(f"CurrentVersionCode: {apk_versionCode}\n")
             f.write(f"Name: {apk_application}\n")
-            f.write(f"SourceCode: {html_url}\n")
-            f.write(f"Summary: 'Development release of {apk_application}.\n")
+            f.write(f"SourceCode: '{html_url}'\n")
+            f.write(f"Summary: '{apk_application} ({apk_packageName}).'\n")
+            f.write(f"Description: 'Development release of {apk_application}.'\n")
             f.write(f"License: proprietary\n")
             
     else:
@@ -73,7 +83,7 @@ def add_apk_to_fdroid(filename, apk_versionName, apk_versionCode, apk_packageNam
 
     # Move the APK file to the fdroid repo directory
     destination_apk_path = os.path.join(BUILD_REPO_DIR, os.path.basename(filename))
-    os.rename(filename, destination_apk_path)
+    # 'rename' raises exception if the file already exists, 'replace' does not
+    os.replace(filename, destination_apk_path)
     print(f"Moved APK file to {destination_apk_path}")
-
 
