@@ -4,6 +4,7 @@ ROOT_DIR_NT         = r"C:\Users\janne.saarikettu\source\repos\misc\AppcAutoPubl
 ROOT_DIR            = "" # Set to empty string to be set later based on OS
 
 DATA_DIR            = "data"
+BUILD_DIR           = "build_environment/NidTestAppCenter"
 BUILD_REPO_DIR      = "build_environment/NidTestAppCenter/repo"
 BUILD_METADATA_DIR  = "build_environment/NidTestAppCenter/metadata" 
 

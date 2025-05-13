@@ -1,5 +1,6 @@
 import os
 import shutil
+import subprocess
 
 from config import *
 
@@ -86,4 +87,38 @@ def add_apk_to_fdroid(filename, apk_versionName, apk_versionCode, apk_packageNam
     # 'rename' raises exception if the file already exists, 'replace' does not
     os.replace(filename, destination_apk_path)
     print(f"Moved APK file to {destination_apk_path}")
+
+def update_fdroid_Linux():
+    """Runs the 'fdroid update' command. NOTE: This works only in Linux."""
+
+    # Testing in Windows - cannot run fdroid update
+    if (os.name == 'nt'):           
+        print(f"Cannot run fdroid update in Windows. Perform this manually:\n    cd {BUILD_DIR}\n    fdroid update")
+        return
+
+
+    # Check if the fdroid build directory exists
+    if not os.path.exists(BUILD_DIR):
+        print(f"F-Droid build directory {BUILD_DIR} does not exist.")
+        raise Exception(f"BUILD_DIR {BUILD_DIR} does not exist - cannot proceed.")
+
+    # Change to the F-Droid build directory
+    os.chdir(BUILD_DIR)
+
+    # Run the fdroid build command
+    # os.system("fdroid update")  # Update the repository
+    try:
+        result = subprocess.run(["fdroid", "update"], check=True, text=True, capture_output=True)
+        print("Command output:", result.stdout)
+    except subprocess.CalledProcessError as e:
+        print("Error occurred while running 'fdroid update'")
+        os.chdir(ROOT_DIR)
+        raise Exception(f"Error occurred while running 'fdroid update':", e.stderr)
+
+    # Change back to the original directory
+    os.chdir(ROOT_DIR)
+
+    print("F-Droid repository built successfully.")
+
+
 
