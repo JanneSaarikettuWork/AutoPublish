@@ -1,6 +1,8 @@
+import datetime
 import os
 import shutil
 import subprocess
+import zipfile
 
 from config import *
 
@@ -34,10 +36,11 @@ def add_apk_to_fdroid(filename, apk_versionName, apk_versionCode, apk_packageNam
                     print(f"Copying {src} to {dst}")
                     shutil.copy(src, dst)
 
-    # Add release notes to the changelog file
+    # Add release notes to the changelog file, if it does not exist
     changelog_file = os.path.join(changelog_subdirectory, f"{apk_versionCode}.txt")
-    with open(changelog_file, 'w') as f:
-        f.write(f"{relnotes}\n")
+    if not os.path.exists(changelog_file):
+        with open(changelog_file, 'w') as f:
+            f.write(f"{relnotes}\n")
 
     # Check if packageName.yml file exits in the fdroid metadata directory
     packageName_yml_file = os.path.join(BUILD_METADATA_DIR, apk_packageName+".yml")
@@ -93,9 +96,8 @@ def update_fdroid_Linux():
 
     # Testing in Windows - cannot run fdroid update
     if (os.name == 'nt'):           
-        print(f"Cannot run fdroid update in Windows. Perform this manually:\n    cd {BUILD_DIR}\n    fdroid update")
+        print(f"Cannot run fdroid update in Windows. Perform this manually in Linux:\n  cd {BUILD_DIR}\n  fdroid update")
         return
-
 
     # Check if the fdroid build directory exists
     if not os.path.exists(BUILD_DIR):
@@ -120,5 +122,37 @@ def update_fdroid_Linux():
 
     print("F-Droid repository built successfully.")
 
+def backup_and_copy_build_to_run_environment():
+    """Backs up the current run environment and copies build repo directory it to the run environment."""
 
+    # Check if the run directores exists
+    if not os.path.exists(RUN_REPO_DIR):
+        print(f"Run repo directory {RUN_REPO_DIR} does not exist - creating it.")
+        os.makedirs(RUN_REPO_DIR)
+    if not os.path.exists(RUN_BACKUP_DIR):
+        print(f"Run backup directory {RUN_BACKUP_DIR} does not exist - creating it.")
+        os.makedirs(RUN_BACKUP_DIR)
+
+    # Zip the contents of current RUN_REPO_DIR
+    datetime_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+    zip_filename = f"repo_{datetime_str}.zip"
+    zip_filepath = os.path.join(RUN_BACKUP_DIR, zip_filename)
+
+    print(f"Creating backup zip file of the current run environment: {zip_filepath}")
+
+    with zipfile.ZipFile(zip_filepath, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        for root, dirs, files in os.walk(RUN_REPO_DIR):
+            for file in files:
+                file_path = os.path.join(root, file)
+                arcname = os.path.relpath(file_path, RUN_REPO_DIR)
+                zipf.write(file_path, arcname)
+   
+    # Empty the run repo directory
+    shutil.rmtree(RUN_REPO_DIR)
+
+    # Copy the build repo directory to the run environment
+    print(f"Copying build repo directory to the run environment: {RUN_REPO_DIR}")
+    shutil.copytree(BUILD_REPO_DIR, RUN_REPO_DIR)
+
+    print(f"Backup and copy of build to run environment completed successfully.")
 

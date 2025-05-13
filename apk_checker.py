@@ -35,13 +35,23 @@ def get_apk_info(filename):
 
 def get_apk_info(filename):
     """Extracts package name, version name, and version code from an APK file using aapt."""
-    apk = APK(filename)
-    print("package name:\t" + apk.package)
-    print("version name:\t" + apk.version_name)
-    print("version code:\t" + apk.version_code)
-    print("apk.application: " + apk.application)
+    
+    # Problem: leaves the file open and does not close it
+    # apk = APK(filename)
 
-    return apk.package, apk.version_name, apk.version_code, apk.application
+    with open(filename, 'rb') as f:   # Open the file in binary mode  
+        apk = APK(f.read(), raw=True)
+        apk_package       = apk.package
+        apk_version_name  = apk.version_name
+        apk_version_code  = apk.version_code
+        apk_application   = apk.application
+  
+    print("package name:\t" + apk_package)
+    print("version name:\t" + apk_version_name)
+    print("version code:\t" + apk_version_code)
+    print("apk.application: " + apk_application)
+
+    return apk_package, apk_version_name, apk_version_code, apk_application
 
 
 

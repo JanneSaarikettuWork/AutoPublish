@@ -90,6 +90,7 @@ if __name__ == "__main__":
     # Application main loop
     while True:
         print ("Checking for new published GitHub releases in supported repos...")
+        changes_made_to_fdroid = False
 
         # Release checking main loop
         for repo in supported_repos:
@@ -138,6 +139,12 @@ if __name__ == "__main__":
                 print(f"Error in getting APK info from {filename}. Skipping this release {relname}.\nException: {e}")
                 continue
 
+            # apk_versionName = '1.1.0'
+            # apk_versionCode = '5'
+            # apk_packageName = 'com.nordicid.yarfid'
+            # apk_application = 'YARFID'
+
+
             orgfilename = filename
 
             # Make sure the apk file name contain the version name in it
@@ -163,11 +170,45 @@ if __name__ == "__main__":
             html_url = 'https://github.com/NordicID/YARFID/'
             """
 
+            # Add the APK file to the F-Droid build directory and update metadata
             try:
                 add_apk_to_fdroid(filename, apk_versionName, apk_versionCode, apk_packageName, apk_application, html_url, relnotes)
             except Exception as e:
                 print(f"Error in adding APK file {filename} to fdroid. Skipping this release {relname}.\nException: {e}")
                 continue
 
+
+            # All successfully done - add the release to the database
+            try:
+                insert_record(DB_FILE, repo, relname, apk_packageName, apk_versionName, apk_versionCode, date)
+            except Exception as e:
+                print(f"Error in adding release {relname} to the database. Skipping this release {relname}.\nException: {e}")
+                continue
+
+            changes_made_to_fdroid = True
+            # Release checking main loop - end
+
+
+        # Application main loop - end
+        # If changes were made to the F-Droid repository, run the fdroid update command
+        if changes_made_to_fdroid:
+            try:
+                update_fdroid_Linux()
+            except Exception as e:
+                print(f"Error in updating F-Droid repository. Skipping this round.\nException: {e}")
+                continue
+
+            try:
+                backup_and_copy_build_to_run_environment()
+            except Exception as e:
+                print(f"Error in copying build to run environment. Skipping this round.\nException: {e}")
+                continue
+
+            changes_made_to_fdroid = False
+
         print("Checking done. Waining for 5 minutes before next check...")
-        time.sleep(5 * 60)
+        # time.sleep(5 * 60)
+        time.sleep(5 * 600) # 50 minutes for testing
+        
+
+
