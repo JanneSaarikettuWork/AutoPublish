@@ -69,27 +69,28 @@ if __name__ == "__main__":
     except:
         raise Exception("Error in reading list of supported repositories - cannot proceed.")
     
-    if (os.name == 'nt'):           # Testing in Windows
-        print("Supported Repositories:")
-        for repo in supported_repos:
-            print(repo.strip())
+    print("Supported Repositories:")
+    for repo in supported_repos:
+        print(repo.strip())
     
     try:
         DB_FILE = initialize_db(DATA_DIR)
     except:
         raise Exception("Error in initializing database - cannot proceed.")
 
+    print(f"Sqlite3 database '{DB_FILE}' initialized successfully.")
+
     try:
         initialize_githubber()
     except:
         raise Exception("Error in initializing githubber - cannot proceed.")
 
-    if (os.name == 'nt'):           # Testing in Windows
-        print(f"Sqlite3 database '{DB_FILE}' initialized successfully.")
+    print("Initial checking done")
 
     # Application main loop
     while True:
-        print ("Checking for new published GitHub releases in supported repos...")
+        print("---------------------")
+        print("Checking for new published GitHub releases in supported repos...")
         changes_made_to_fdroid = False
 
         # Release checking main loop
@@ -113,12 +114,12 @@ if __name__ == "__main__":
             # Check if the release is already in the database
             try:
                 if release_exist(DB_FILE, repo, relname):
-                    print(f"Release {relname} already exists in the database.")
+                    print(f"{repo} release {relname} already exists in the database. Skip.")
                     continue
             except Exception as e:
                 print(f"Error in checking if release {relname} exists in the database. Skipping this release {relname}.\nException: {e}")
                 continue
-            
+
             # Download the APK file of the release (the first file with .apk in its name)
             try:
                 print(f"Release {relname} not found in the database. Downloading APK file...")
@@ -185,6 +186,8 @@ if __name__ == "__main__":
                 print(f"Error in adding release {relname} to the database. Skipping this release {relname}.\nException: {e}")
                 continue
 
+            print(f"Added new release to the database:\n- Repo:\t\t{repo}\n- Release:\t{relname}\n- PkgName:\t{apk_packageName}\n- VersName:\t{apk_versionName}\n- VersCode:\t{apk_versionCode}\n- Date (apk):\t{date}")
+
             changes_made_to_fdroid = True
             # Release checking main loop - end
 
@@ -203,8 +206,6 @@ if __name__ == "__main__":
             except Exception as e:
                 print(f"Error in copying build to run environment. Skipping this round.\nException: {e}")
                 continue
-
-            changes_made_to_fdroid = False
 
         print("Checking done. Waining for 5 minutes before next check...")
         # time.sleep(5 * 60)

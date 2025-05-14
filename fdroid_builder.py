@@ -134,11 +134,11 @@ def backup_and_copy_build_to_run_environment():
         os.makedirs(RUN_BACKUP_DIR)
 
     # Zip the contents of current RUN_REPO_DIR
-    datetime_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+    datetime_str = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     zip_filename = f"repo_{datetime_str}.zip"
     zip_filepath = os.path.join(RUN_BACKUP_DIR, zip_filename)
 
-    print(f"Creating backup zip file of the current run environment: {zip_filepath}")
+    print(f"Creating backup zip of the run environment: {zip_filepath}")
 
     with zipfile.ZipFile(zip_filepath, 'w', zipfile.ZIP_DEFLATED) as zipf:
         for root, dirs, files in os.walk(RUN_REPO_DIR):
@@ -151,7 +151,7 @@ def backup_and_copy_build_to_run_environment():
     shutil.rmtree(RUN_REPO_DIR)
 
     # Copy the build repo directory to the run environment
-    print(f"Copying build repo directory to the run environment: {RUN_REPO_DIR}")
+    print(f"Copying build repo to the run environment: {RUN_REPO_DIR}")
     shutil.copytree(BUILD_REPO_DIR, RUN_REPO_DIR)
 
     print(f"Backup and copy of build to run environment completed successfully.")
