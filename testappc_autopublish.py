@@ -59,6 +59,8 @@ def read_supported_repos():
 
 
 if __name__ == "__main__":
+
+    # Initial checks - stop if any of the checks fail
     if not check_directories():
         raise Exception("One or more directories do not exist - cannot proceed.")
     else:
@@ -92,6 +94,14 @@ if __name__ == "__main__":
         print("---------------------")
         print("Checking for new published GitHub releases in supported repos...")
         changes_made_to_fdroid = False
+
+        # The main loop - continue and try again if any of the checks fail
+        try:
+            supported_repos = read_supported_repos()
+        except:
+            raise Exception("Error in reading list of supported repositories. Retry in 60 seconds...")
+            time.sleep(60)
+            continue
 
         # Release checking main loop
         for repo in supported_repos:
@@ -186,7 +196,7 @@ if __name__ == "__main__":
                 print(f"Error in adding release {relname} to the database. Skipping this release {relname}.\nException: {e}")
                 continue
 
-            print(f"Added new release to the database:\n- Repo:\t\t{repo}\n- Release:\t{relname}\n- PkgName:\t{apk_packageName}\n- VersName:\t{apk_versionName}\n- VersCode:\t{apk_versionCode}\n- Date (apk):\t{date}")
+            print(f"Added new release to the database:\n- Repo:\t\t{repo}\n- Release:\t{relname}\n- PkgName:\t{apk_packageName}\n- VersName:\t{apk_versionName}\n- VersCode:\t{apk_versionCode}\n- Release date:\t{date}")
 
             changes_made_to_fdroid = True
             # Release checking main loop - end
@@ -208,8 +218,8 @@ if __name__ == "__main__":
                 continue
 
         print("Checking done. Waining for 5 minutes before next check...")
-        # time.sleep(5 * 60)
-        time.sleep(5 * 600) # 50 minutes for testing
+        time.sleep(5 * 60)
+        # time.sleep(5 * 600) # 50 minutes for testing
         
 
 
