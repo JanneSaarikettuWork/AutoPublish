@@ -12,10 +12,10 @@ def add_apk_to_fdroid(filename, apk_versionName, apk_versionCode, apk_packageNam
     # Check if packageName subdirectory exits in the fdroid metadata directory
     packageName_subdirectory = os.path.join(BUILD_METADATA_DIR, apk_packageName)
     if not os.path.exists(packageName_subdirectory):
-        print(f"Creating directory {packageName_subdirectory} and subdirectories")
+        logger.debug(f"Creating directory {packageName_subdirectory} and subdirectories")
         os.makedirs(packageName_subdirectory)
     else:
-        print(f"Directory {packageName_subdirectory} exists")
+        logger.debug(f"Directory {packageName_subdirectory} exists")
 
     # Check (& create if needed) the rest of the packageName subdirectories
     enUS_subdirectory = os.path.join(packageName_subdirectory, "en-US")
@@ -33,7 +33,7 @@ def add_apk_to_fdroid(filename, apk_versionName, apk_versionCode, apk_packageNam
                 src = os.path.join(DATA_DIR, sample_screenshot)
                 dst = os.path.join(screenshots_subdirectory, sample_screenshot)
                 if not os.path.exists(dst):
-                    print(f"Copying {src} to {dst}")
+                    logger.debug(f"Copying {src} to {dst}")
                     shutil.copy(src, dst)
 
     # Add release notes to the changelog file, if it does not exist
@@ -46,7 +46,7 @@ def add_apk_to_fdroid(filename, apk_versionName, apk_versionCode, apk_packageNam
     packageName_yml_file = os.path.join(BUILD_METADATA_DIR, apk_packageName+".yml")
 
     if not os.path.exists(packageName_yml_file):
-        print(f"Creating draft {packageName_yml_file} file")
+        logger.debug(f"Creating draft {packageName_yml_file} file")
         with open(packageName_yml_file, 'w') as f:
             f.write(f"AuthorName: 'Brady'\n")
             f.write(f"Categories:\n- TestAppCenter\n")
@@ -59,7 +59,7 @@ def add_apk_to_fdroid(filename, apk_versionName, apk_versionCode, apk_packageNam
             
     else:
         # Update the yml file with the new version code
-        print(f"File {packageName_yml_file} exists. Updating it with the new version code.")
+        logger.debug(f"File {packageName_yml_file} exists. Updating it with the new version code.")
         temp_yml_file = packageName_yml_file + ".tmp"
 
         with open(packageName_yml_file, "r") as infile:
@@ -76,32 +76,31 @@ def add_apk_to_fdroid(filename, apk_versionName, apk_versionCode, apk_packageNam
         # org_size = os.path.getsize(packageName_yml_file)
         # new_size = os.path.getsize(temp_yml_file)
         # margin = 5 # just in case if original file had some extra whitespace
-
         # if (new_size + margin < org_size):
         #     raise Exception(f"Something bad happened in converting {packageName_yml_file} to {temp_yml_file}")
 
         # Replace the original yml file with the updated temp file
         os.replace(temp_yml_file, packageName_yml_file)
-        print(f"Successfully updated {packageName_yml_file} with the new version code {apk_versionCode}")
+        logger.debug(f"Successfully updated {packageName_yml_file} with the new version code {apk_versionCode}")
 
 
     # Move the APK file to the fdroid repo directory
     destination_apk_path = os.path.join(BUILD_REPO_DIR, os.path.basename(filename))
     # 'rename' raises exception if the file already exists, 'replace' does not
     os.replace(filename, destination_apk_path)
-    print(f"Moved APK file to {destination_apk_path}")
+    logger.debug(f"Moved APK file to {destination_apk_path}")
 
 def update_fdroid_Linux():
     """Runs the 'fdroid update' command. NOTE: This works only in Linux."""
 
     # Testing in Windows - cannot run fdroid update
     if (os.name == 'nt'):           
-        print(f"Cannot run fdroid update in Windows. Perform this manually in Linux:\n  cd {BUILD_DIR}\n  fdroid update")
+        logger.warning(f"\n\tCannot run fdroid update in Windows. Run these commands manually in Linux to update the build repo:\n\t > cd {BUILD_DIR}\n\t > fdroid update\n\t..and then copy the build repo to run environment.\n")
         return
 
     # Check if the fdroid build directory exists
     if not os.path.exists(BUILD_DIR):
-        print(f"F-Droid build directory {BUILD_DIR} does not exist.")
+        logger.debug(f"F-Droid build directory {BUILD_DIR} does not exist.")
         raise Exception(f"BUILD_DIR {BUILD_DIR} does not exist - cannot proceed.")
 
     # Change to the F-Droid build directory
@@ -111,26 +110,26 @@ def update_fdroid_Linux():
     # os.system("fdroid update")  # Update the repository
     try:
         result = subprocess.run(["fdroid", "update"], check=True, text=True, capture_output=True)
-        print("Command output:", result.stdout)
+        logger.debug("Command output:", result.stdout)
     except subprocess.CalledProcessError as e:
-        print("Error occurred while running 'fdroid update'")
+        logger.debug("Error occurred while running 'fdroid update'")
         os.chdir(ROOT_DIR)
         raise Exception(f"Error occurred while running 'fdroid update':", e.stderr)
 
     # Change back to the original directory
     os.chdir(ROOT_DIR)
 
-    print("F-Droid repository built successfully.")
+    logger.debug("F-Droid repository built successfully.")
 
 def backup_and_copy_build_to_run_environment():
     """Backs up the current run environment and copies build repo directory it to the run environment."""
 
     # Check if the run directores exists
     if not os.path.exists(RUN_REPO_DIR):
-        print(f"Run repo directory {RUN_REPO_DIR} does not exist - creating it.")
+        logger.debug(f"Run repo directory {RUN_REPO_DIR} does not exist - creating it.")
         os.makedirs(RUN_REPO_DIR)
     if not os.path.exists(RUN_BACKUP_DIR):
-        print(f"Run backup directory {RUN_BACKUP_DIR} does not exist - creating it.")
+        logger.debug(f"Run backup directory {RUN_BACKUP_DIR} does not exist - creating it.")
         os.makedirs(RUN_BACKUP_DIR)
 
     # Zip the contents of current RUN_REPO_DIR
@@ -138,7 +137,7 @@ def backup_and_copy_build_to_run_environment():
     zip_filename = f"repo_{datetime_str}.zip"
     zip_filepath = os.path.join(RUN_BACKUP_DIR, zip_filename)
 
-    print(f"Creating backup zip of the run environment: {zip_filepath}")
+    logger.debug(f"Creating backup zip of the run environment: {zip_filepath}")
 
     with zipfile.ZipFile(zip_filepath, 'w', zipfile.ZIP_DEFLATED) as zipf:
         for root, dirs, files in os.walk(RUN_REPO_DIR):
@@ -151,8 +150,8 @@ def backup_and_copy_build_to_run_environment():
     shutil.rmtree(RUN_REPO_DIR)
 
     # Copy the build repo directory to the run environment
-    print(f"Copying build repo to the run environment: {RUN_REPO_DIR}")
+    logger.debug(f"Copying build repo to the run environment: {RUN_REPO_DIR}")
     shutil.copytree(BUILD_REPO_DIR, RUN_REPO_DIR)
 
-    print(f"Backup and copy of build to run environment completed successfully.")
+    logger.debug(f"Backup and copy of build to run environment completed successfully.")
 

@@ -1,5 +1,6 @@
 run_environment/
 build_environment/
+data/installed_versions.db
 
 
 *.apk

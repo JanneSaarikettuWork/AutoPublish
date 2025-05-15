@@ -4,6 +4,8 @@ import subprocess
 # pip install pyaxmlparser - https://pypi.org/project/pyaxmlparser/
 from pyaxmlparser import APK
 
+from config import *
+
 
 """
 This is interesting. This is what CoPilot suggested for the function. 
@@ -28,7 +30,7 @@ def get_apk_info(filename):
         
         return package_name, version_name, version_code
     except Exception as e:
-        print(f"Error extracting APK info: {e}")
+        logger.info(f"Error extracting APK info: {e}")
         return None, None, None
 
 """    
@@ -46,10 +48,7 @@ def get_apk_info(filename):
         apk_version_code  = apk.version_code
         apk_application   = apk.application
   
-    print("package name:\t" + apk_package)
-    print("version name:\t" + apk_version_name)
-    print("version code:\t" + apk_version_code)
-    print("apk.application: " + apk_application)
+    logger.debug(f"Package name: {apk_package}, version name: {apk_version_name}, version code: {apk_version_code}, application: {apk_application}")
 
     return apk_package, apk_version_name, apk_version_code, apk_application
 

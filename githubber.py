@@ -3,9 +3,9 @@ import os
 import re
 import subprocess
 import time
-
 import requests
 
+from config import *
 
 def initialize_githubber():
     global token
@@ -26,10 +26,10 @@ def communicate(url):
             except:
                 pass
         if retry < 2:
-            print('curl: ' + stderr.decode('utf-8'))
+            logger.debug('curl: ' + stderr.decode('utf-8'))
             time.sleep(10)
-            print('Retrying...')
-    print('curl: ' + stderr.decode('utf-8'))
+            logger.debug('Retrying...')
+    logger.debug('curl: ' + stderr.decode('utf-8'))
 
 
 def getRelease(repo, version):
@@ -42,7 +42,7 @@ def getRelease(repo, version):
                     release = rel
                     break
         except:
-            print(json.dumps(rels))
+            logger.debug(json.dumps(rels))
     else:
         release = communicate('https://api.github.com/repos/{}/releases/latest'.format(repo))
 
@@ -91,7 +91,7 @@ def parse_release_data(release):
             data = re.compile(r'^ *\-.*$', re.MULTILINE) 
             matches = data.finditer(relnote_text_to_parse)
             for match in matches:
-                # print(match.group()) # Just printing match does not seem to print the whole match, therefore group()
+                # logger.debug(match.group()) # Just printing match does not seem to print the whole match, therefore group()
                 relnotes += match.group() + "\n"
 
             relnotes = relnotes.strip()
@@ -109,13 +109,13 @@ def download_Linux(url, name):
         _, stderr = proc.communicate()
         if proc.returncode == 0:
             if retry > 0:
-                print('Success')
+                logger.debug('Success')
             return
         if retry < 2:
-            print(stderr.decode('utf-8'))
+            logger.debug(stderr.decode('utf-8'))
             time.sleep(10)
-            print('Retrying...')
-    print(stderr.decode('utf-8'))
+            logger.debug('Retrying...')
+    logger.debug(stderr.decode('utf-8'))
 
 # Testing in Windows
 def download_Windows(URL, filename): 
@@ -134,9 +134,10 @@ def download_Windows(URL, filename):
         with open(filename, "wb") as file:
             for chunk in response.iter_content(chunk_size=8192):
                 file.write(chunk)
-        print(f"Downloading {filename} completed successfully.")
+        # logger.debug(f"Downloading {filename} completed successfully.")
     else:
-        print(f"Failed to download {filename}. Status code: {response.status_code}")
+        error_msg = f"Failed to download {filename}. Status code: {response.status_code}"
+        raise Exception(error_msg)
 
 
 def download_apk_file(URL, filename):

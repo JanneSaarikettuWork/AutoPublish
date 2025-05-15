@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import os
+from sys import exception
 import time
 
 # This file contains the configuration for the application, including directory paths and other constants.
@@ -25,29 +26,28 @@ def check_directories():
 
     # Check if the root directory exists and change to it
     if not os.path.exists(ROOT_DIR):
-        print(f"Directory {ROOT_DIR} does not exist.")
+        logger.debug(f"Directory {ROOT_DIR} does not exist.")
         return False
 
     os.chdir(ROOT_DIR)
 
     if not os.path.exists(DATA_DIR):
-        print(f"Directory {DATA_DIR} does not exist.")
+        logger.error(f"Directory {DATA_DIR} does not exist.")
         return False
     if not os.path.exists(BUILD_REPO_DIR):
-        print(f"Directory {BUILD_REPO_DIR} does not exist.")
+        logger.error(f"Directory {BUILD_REPO_DIR} does not exist.")
         return False
     if not os.path.exists(BUILD_METADATA_DIR):
-        print(f"Directory {BUILD_METADATA_DIR} does not exist.")
+        logger.error(f"Directory {BUILD_METADATA_DIR} does not exist.")
         return False
     if not os.path.exists(RUN_BACKUP_DIR):
-        print(f"Directory {RUN_BACKUP_DIR} does not exist.")
+        logger.error(f"Directory {RUN_BACKUP_DIR} does not exist.")
         return False
     if not os.path.exists(RUN_REPO_DIR):
-        print(f"Directory {RUN_REPO_DIR} does not exist.")
+        logger.error(f"Directory {RUN_REPO_DIR} does not exist.")
         return False
 
     return True
-
 
 def read_supported_repos():
     """Reads all lines from the specified file."""
@@ -55,106 +55,155 @@ def read_supported_repos():
         raise FileNotFoundError(f"The file '{SUPPORTED_REPOS_FILE}' does not exist.")
     with open(SUPPORTED_REPOS_FILE, 'r') as file:
         return file.readlines()
-    
 
 
 if __name__ == "__main__":
 
-    # Initial checks - stop if any of the checks fail
-    if not check_directories():
-        raise Exception("One or more directories do not exist - cannot proceed.")
+    # Set up the logger to log to both console and file
+    log_dir_path  = os.path.join(ROOT_DIR, LOG_DIR)
+    log_file_path = os.path.join(log_dir_path, LOG_FILE)
+    try:
+        if not os.path.exists(log_dir_path):
+            os.makedirs(log_dir_path)
+        setup_logging(logger, log_file_path)    
+    except Exception as e:
+        error_msg = f"Error in setting up logging to directory {log_dir_path} - cannot proceed"
+        print(f"{error_msg}: {e}")
+        raise
     else:
-        print("Directories check OK")
+        logger.info("")
+        logger.info("************************ Starting the application ************************")
+        logger.info(f"Logging set up successfully in '{log_file_path}'")
 
+    # Initial checks - stop if any of the checks fail
+    # Directories
+    if not check_directories():
+        error_msg = "One or more directories do not exist - cannot proceed."
+        logger.critical(error_msg)
+        raise Exception(error_msg)
+    else:
+        logger.debug("Directories check OK")
+
+    # Supported repositories
     try:
         supported_repos = read_supported_repos()
-    except:
-        raise Exception("Error in reading list of supported repositories - cannot proceed.")
-    
-    print("Supported Repositories:")
+    except Exception as e:
+        error_msg = "Error in reading list of supported repositories - cannot proceed" 
+        logger.exception(error_msg)
+        raise # re-raise the original exception to stop the program
+    else:
+        logger.debug("Supported repositories read successfully.")
+
+    repos_str = "\n\tSupported repositories:"
     for repo in supported_repos:
-        print(repo.strip())
-    
+        repos_str += f"\n\t - {repo.strip()}"
+    logger.info(repos_str)
+
+    # logger.debug("Supported Repositories:")
+    # for repo in supported_repos:
+    #     logger.debug(repo.strip())
+
+    # Database
     try:
         DB_FILE = initialize_db(DATA_DIR)
     except:
-        raise Exception("Error in initializing database - cannot proceed.")
-
-    print(f"Sqlite3 database '{DB_FILE}' initialized successfully.")
-
+        error_msg = "Error in initializing Sqlite3 database '{DB_FILE}' - cannot proceed"
+        logger.exception(error_msg)
+        raise
+    else:
+        logger.debug(f"Sqlite3 database '{DB_FILE}' initialized successfully.")
+    
+    # GitHub access
     try:
         initialize_githubber()
     except:
-        raise Exception("Error in initializing githubber - cannot proceed.")
+        error_msg = "Error in initializing githubber - cannot proceed."
+        logger.exception(error_msg)
+        raise
+    else:
+        logger.debug("Githubber initialized successfully.")
 
-    print("Initial checking done")
+    logger.info("Initialization and initial checking done")
 
+    # ---------------------
     # Application main loop
+    # ---------------------
     while True:
-        print("---------------------")
-        print("Checking for new published GitHub releases in supported repos...")
+        logger.info("----------------------------------------------------------------")
+        logger.info("Checking for new published GitHub releases in supported repos...")
         changes_made_to_fdroid = False
 
         # The main loop - continue and try again if any of the checks fail
         try:
             supported_repos = read_supported_repos()
         except:
-            raise Exception("Error in reading list of supported repositories. Retry in 60 seconds...")
+            error_msg = "Error in reading list of supported repositories. Retry in 60 seconds..."
+            logger.exception(error_msg)
             time.sleep(60)
             continue
 
+        # ---------------------
         # Release checking main loop
+        # ---------------------
         for repo in supported_repos:
             repo = repo.strip()
-            print(f"Checking {repo}...")
+            logger.info(f"Checking {repo}...")
 
             # Get the latest release data from the repository and parse it
             try:
                 latestRelease = getRelease(repo, 'latest')
                 URL, relname, filename, version, date, relnotes, html_url  = parse_release_data(latestRelease)
             except Exception as e:
-                print(f"Error in getting latest release data from {repo}. Skipping this repository.\nException: {e}")
+                error_msg = f"Error in getting latest release data from {repo}. Skipping this repository"
+                logger.exception(error_msg)
                 continue
+            else:
+                logger.debug(f"Latest release data from {repo} parsed successfully.")
 
             # Is this a development release?
             if False == ("-dev" in relname or "_dev" in relname):
-                print(f"Release {relname} is not a development release. Skipping...")
+                logger.debug(f"Release {relname} is not a development release. Skipping...")
                 continue
+            else:
+                logger.debug(f"Release {relname} is a development release. Proceeding...")
 
             # Check if the release is already in the database
             try:
                 if release_exist(DB_FILE, repo, relname):
-                    print(f"{repo} release {relname} already exists in the database. Skip.")
+                    logger.debug(f"{repo} release {relname} already exists in the database. Skip.")
                     continue
             except Exception as e:
-                print(f"Error in checking if release {relname} exists in the database. Skipping this release {relname}.\nException: {e}")
+                error_msg = f"Error in checking if release {relname} exists in the database. Skipping this release {relname}."
+                logger.exception(error_msg)
                 continue
+            else:
+                logger.debug(f"Release {relname} not found in the database. Proceeding...")
 
             # Download the APK file of the release (the first file with .apk in its name)
             try:
-                print(f"Release {relname} not found in the database. Downloading APK file...")
+                logger.debug(f"Start downloading APK file of release {relname}...")
                 download_apk_file(URL, filename)
             except Exception as e:
-                print(f"Error in downloading apk file {filename}. Skipping this release {relname}.\nException: {e}")
+                error_msg = f"Error in downloading APK file {filename}. Skipping this release {relname}."
+                logger.exception(error_msg)
                 continue
+            else:
+                logger.debug(f"APK file {filename} of release {relname} downloaded successfully.")
 
             # Double-check that the file was downloaded successfully
             if not os.path.exists(filename):
-                print(f"Problem in downloading file {filename}. Skipping this release {relname}.")
+                logger.error(f"Problem in accessing file {filename}. Skipping this release {relname}.")
                 continue
 
             # Get metadata from the APK file
             try:
                 apk_packageName, apk_versionName, apk_versionCode, apk_application = get_apk_info(filename)
             except Exception as e:
-                print(f"Error in getting APK info from {filename}. Skipping this release {relname}.\nException: {e}")
+                error_msg = f"Error in extracting APK info from {filename}. Skipping this release {relname}."
+                logger.exception(error_msg)
                 continue
-
-            # apk_versionName = '1.1.0'
-            # apk_versionCode = '5'
-            # apk_packageName = 'com.nordicid.yarfid'
-            # apk_application = 'YARFID'
-
+            else:
+                logger.debug(f"APK info from {filename} extracted successfully.")
 
             orgfilename = filename
 
@@ -166,9 +215,10 @@ if __name__ == "__main__":
                     new_filename = new_filename + "-v" + apk_versionName + "." +  apk_versionCode + ".apk"
                     os.rename(filename, new_filename)
                     filename = new_filename
-                    print(f"Renamed {filename} to {new_filename}")
+                    logger.debug(f"Renamed {orgfilename} to {filename}")
             except Exception as e:
-                print(f"Error in renaming file {orgfilename} to {new_filename}. Skipping this release {relname}.\nException: {e}")
+                error_msg = f"Error in renaming file {orgfilename} to {filename}. Skipping this release {relname}."
+                logger.exception(error_msg)
                 continue
 
             """
@@ -185,41 +235,62 @@ if __name__ == "__main__":
             try:
                 add_apk_to_fdroid(filename, apk_versionName, apk_versionCode, apk_packageName, apk_application, html_url, relnotes)
             except Exception as e:
-                print(f"Error in adding APK file {filename} to fdroid. Skipping this release {relname}.\nException: {e}")
+                error_msg = f"Error in adding APK file {filename} to fdroid. Skipping this release {relname}."
+                logger.exception(error_msg)
                 continue
-
+            else:
+                logger.debug(f"APK file {filename} added to fdroid successfully.")
 
             # All successfully done - add the release to the database
             try:
                 insert_record(DB_FILE, repo, relname, apk_packageName, apk_versionName, apk_versionCode, date)
             except Exception as e:
-                print(f"Error in adding release {relname} to the database. Skipping this release {relname}.\nException: {e}")
+                error_msg = f"Error in adding release {relname} to the database. Skipping this release {relname}."
+                logger.exception(error_msg)
                 continue
+            else:
+                logger.debug(f"Release {relname} added to the database successfully.")
 
-            print(f"Added new release to the database:\n- Repo:\t\t{repo}\n- Release:\t{relname}\n- PkgName:\t{apk_packageName}\n- VersName:\t{apk_versionName}\n- VersCode:\t{apk_versionCode}\n- Release date:\t{date}")
+            formatted_db_info = f"""
+            Added new release to the database:
+            - GitHub repo:  {repo}
+            - Release:      {relname}
+            - PackageName:  {apk_packageName}
+            - VersionName:  {apk_versionName}
+            - VersionCode:  {apk_versionCode}
+            - Release date: {date}"""
+            logger.info(formatted_db_info)
 
             changes_made_to_fdroid = True
+            #--------------------------------
             # Release checking main loop - end
+            #--------------------------------
 
-
-        # Application main loop - end
-        # If changes were made to the F-Droid repository, run the fdroid update command
+        # Application main loop
+        # If changes were made to the F-Droid repository, run the fdroid update command,
+        # make a backup of the current run environment and copy the build result as a 
+        # new run environment
         if changes_made_to_fdroid:
             try:
                 update_fdroid_Linux()
             except Exception as e:
-                print(f"Error in updating F-Droid repository. Skipping this round.\nException: {e}")
+                error_msg = f"Error in updating F-Droid repository. Skipping this round."
+                logger.exception(error_msg)
                 continue
+            else:
+                logger.info("F-Droid repository updated successfully.")
 
             try:
                 backup_and_copy_build_to_run_environment()
             except Exception as e:
-                print(f"Error in copying build to run environment. Skipping this round.\nException: {e}")
+                error_msg = f"Error in backing up old run environment and/or copying build to run environment. Skipping this round."
+                logger.exception(error_msg)
                 continue
+            else:
+                logger.info("Old run environment backed up and build copied as a new run environment.")
 
-        print("Checking done. Waining for 5 minutes before next check...")
+        logger.info("Checking done. Waiting for 5 minutes before next check...")
         time.sleep(5 * 60)
-        # time.sleep(5 * 600) # 50 minutes for testing
         
 
 
